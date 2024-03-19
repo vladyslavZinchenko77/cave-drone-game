@@ -1,13 +1,22 @@
 import { FC } from 'react';
 import { Form, Button, Input, Select } from 'antd';
+import { useNavigate } from 'react-router';
+import { initGame } from '../../services/gameService';
 
 const { Option } = Select;
 
 import './GameSetup.scss';
 
 const GameSetup: FC = () => {
-  const onFinish = (values: { name: string; complexity: number }) => {
-    console.log(values);
+  const navigate = useNavigate();
+
+  const onFinish = async (values: { name: string; complexity: number }) => {
+    try {
+      const playerId = await initGame(values.name, values.complexity);
+      navigate(`/game?playerId=${playerId}`);
+    } catch (error) {
+      console.error('Error initializing game:', error);
+    }
   };
 
   const [form] = Form.useForm();
@@ -51,7 +60,7 @@ const GameSetup: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item className="game-setup__form-item">
-            <Button>Start the game</Button>
+            <Button htmlType="submit">Start the game</Button>
           </Form.Item>
         </Form>
       </div>
