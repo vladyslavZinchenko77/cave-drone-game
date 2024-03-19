@@ -13,7 +13,7 @@ const GameSetup: FC = () => {
   const onFinish = async (values: { name: string; complexity: number }) => {
     try {
       const playerId = await initGame(values.name, values.complexity);
-      navigate(`/game?playerId=${playerId}`);
+      navigate(`/game/${playerId}`);
     } catch (error) {
       console.error('Error initializing game:', error);
     }
