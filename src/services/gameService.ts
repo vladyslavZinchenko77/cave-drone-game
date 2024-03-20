@@ -1,8 +1,5 @@
 import axios from "axios";
 
-
-
-
 const URL = 'https://cave-drone-server.shtoa.xyz'; 
 
 
