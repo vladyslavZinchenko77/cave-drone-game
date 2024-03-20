@@ -1,7 +1,23 @@
-import { FC } from 'react';
+import { FC, useEffect } from 'react';
 
-const GameControl: FC = () => {
-  return <div>GameControl</div>;
+interface GameControlProps {
+  onKeyDown: (event: KeyboardEvent) => void;
+}
+
+const GameControl: FC<GameControlProps> = ({ onKeyDown }) => {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      onKeyDown(event);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onKeyDown]);
+
+  return null;
 };
 
 export default GameControl;
