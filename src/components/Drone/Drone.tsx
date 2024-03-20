@@ -1,5 +1,4 @@
 import { FC } from 'react';
-
 import './Drone.scss';
 
 interface DroneProps {
@@ -16,10 +15,10 @@ const Drone: FC<DroneProps> = ({ x, y }) => {
         position: 'absolute',
         left: `${x}%`,
         top: `${y}%`,
-        transform: 'translateX(-50%) translateY(-50%)',
+        transform: 'translateX(-50%) translateY(-50%) rotate(360deg)',
       }}
     >
-      <polygon points="0,100 50,0 100,100" fill="green" />
+      <polygon points="0,0 50,100 100,0" fill="green" />{' '}
     </svg>
   );
 };
