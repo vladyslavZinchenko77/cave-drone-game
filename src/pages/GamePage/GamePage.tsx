@@ -127,6 +127,12 @@ const GamePage = () => {
     return false;
   };
 
+  useEffect(() => {
+    if (caveData.length > 0) {
+      console.log(caveData);
+    }
+  }, [caveData]);
+
   return (
     <div>
       <h2>Game is starting</h2>

@@ -2,67 +2,65 @@ import axios from "axios";
 
 const URL = 'https://cave-drone-server.shtoa.xyz'; 
 
-
- export const  initGame = async (name: string, complexity: number): Promise<string> => {
+export const initGame = async (name: string, complexity: number): Promise<string> => {
     try {
         const response = await axios.post(`${URL}/init`, { name, complexity });
         return response.data.id;
-      } catch (error) {
-        console.error('Error initializing game:', error);
+    } catch (error) {
+        console.error('Ошибка при инициализации игры:', error);
         throw error;
-      }
+    }
 }
 
-
 export const getPlayerToken = async (playerId: string): Promise<string> => {
-  try {
-    const tokenChunks = await Promise.all([
-      axios.get(`${URL}/token/1?id=${playerId}`),
-      axios.get(`${URL}/token/2?id=${playerId}`),
-      axios.get(`${URL}/token/3?id=${playerId}`),
-      axios.get(`${URL}/token/4?id=${playerId}`),
-    ]);
+    try {
+        const tokenChunks = await Promise.all([
+            axios.get(`${URL}/token/1?id=${playerId}`),
+            axios.get(`${URL}/token/2?id=${playerId}`),
+            axios.get(`${URL}/token/3?id=${playerId}`),
+            axios.get(`${URL}/token/4?id=${playerId}`),
+        ]);
 
-    const token = tokenChunks
-      .map((response) => response.data.chunk)
-      .join('');
+        const token = tokenChunks
+            .map((response) => response.data.chunk)
+            .join('');
 
-    return token;
-  } catch (error) {
-    console.error('Error getting player token:', error);
-    throw error;
-  }
+        return token;
+    } catch (error) {
+        console.error('Ошибка при получении токена игрока:', error);
+        throw error;
+    }
 };
 
 export const getCaveData = async (
-  playerId: string,
-  playerToken: string
+    playerId: string,
+    playerToken: string
 ): Promise<[number, number][]> => {
-  try {
-    const socket = new WebSocket(`${URL}/cave`);
+    try {
+        const socket = new WebSocket(`wss://cave-drone-server.shtoa.xyz/cave`);
 
-    socket.onopen = () => {
-      socket.send(`player:${playerId}-${playerToken}`);
-    };
+        socket.onopen = () => {
+            socket.send(`player:${playerId}-${playerToken}`);
+        };
 
-    const caveData: [number, number][] = [];
+        const caveData: [number, number][] = [];
 
-    socket.onmessage = (event) => {
-      if (event.data === 'finished') {
-        socket.close();
-      } else {
-        const [left, right] = event.data.split(',').map(Number);
-        caveData.push([left, right]);
-      }
-    };
+        socket.onmessage = (event) => {
+            if (event.data === 'finished') {
+                socket.close();
+            } else {
+                const [left, right] = event.data.split(',').map(Number);
+                caveData.push([left, right]);
+            }
+        };
 
-    await new Promise((resolve) => {
-      socket.onclose = resolve;
-    });
+        await new Promise((resolve) => {
+            socket.onclose = resolve;
+        });
 
-    return caveData;
-  } catch (error) {
-    console.error('Error getting cave data:', error);
-    throw error;
-  }
+        return caveData;
+    } catch (error) {
+        console.error('Ошибка при получении данных о пещере:', error);
+        throw error;
+    }
 };
