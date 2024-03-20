@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { Form, Button, Input, Select } from 'antd';
 import { useNavigate } from 'react-router';
 import { initGame } from '../../services/gameService';
+import droneGif from '../../assets/drone.gif';
 
 const { Option } = Select;
 
@@ -64,6 +65,8 @@ const GameSetup: FC = () => {
           </Form.Item>
         </Form>
       </div>
+
+      <img className="drone-img" src={droneGif} alt="drone-animation" />
     </div>
   );
 };
