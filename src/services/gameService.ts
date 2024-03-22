@@ -7,7 +7,7 @@ export const initGame = async (name: string, complexity: number): Promise<string
         const response = await axios.post(`${URL}/init`, { name, complexity });
         return response.data.id;
     } catch (error) {
-        console.error('Ошибка при инициализации игры:', error);
+        console.error('Error during game initialisation:', error);
         throw error;
     }
 }
@@ -27,7 +27,7 @@ export const getPlayerToken = async (playerId: string): Promise<string> => {
 
         return token;
     } catch (error) {
-        console.error('Ошибка при получении токена игрока:', error);
+        console.error('Error when receiving a player token:', error);
         throw error;
     }
 };
@@ -60,7 +60,10 @@ export const getCaveData = async (
 
         return caveData;
     } catch (error) {
-        console.error('Ошибка при получении данных о пещере:', error);
+        console.error('Error when retrieving cave data:', error);
         throw error;
     }
 };
+
+
+
