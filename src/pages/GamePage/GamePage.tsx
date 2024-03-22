@@ -6,7 +6,11 @@ import Drone from '../../components/Drone/Drone';
 import GameControl from '../../components/GameControl/GameControl';
 import { Modal } from 'antd';
 
-const GamePage = () => {
+interface GamePageProps {
+  initialComplexity: number;
+}
+
+const GamePage = ({ initialComplexity }: GamePageProps) => {
   const { playerId } = useParams<{ playerId: string }>();
   const [caveData, setCaveData] = useState<[number, number][]>([]);
   const [dronePosition, setDronePosition] = useState({ x: 50, y: 10 });
@@ -14,7 +18,7 @@ const GamePage = () => {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [win, setWin] = useState(false);
-  const [complexity, setComplexity] = useState(0);
+  const [complexity, setComplexity] = useState(initialComplexity);
 
   const handleKeyDown = (event: KeyboardEvent) => {
     const { key } = event;
@@ -96,6 +100,10 @@ const GamePage = () => {
     return () => clearInterval(gameLoop);
   }, [dronePosition, droneSpeed, caveData, complexity, score]);
 
+  useEffect(() => {
+    setComplexity(initialComplexity);
+  }, [initialComplexity]);
+
   const detectCollision = (
     x: number,
     y: number,
@@ -135,7 +143,7 @@ const GamePage = () => {
 
   return (
     <>
-      <h2>Game is starting</h2>
+      <h2 style={{ textAlign: 'center' }}>Game is starting</h2>
       <Cave
         wallHeight={10}
         caveData={caveData}
