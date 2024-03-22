@@ -134,9 +134,10 @@ const GamePage = () => {
   }, [caveData]);
 
   return (
-    <div>
+    <>
       <h2>Game is starting</h2>
       <Cave
+        wallHeight={10}
         caveData={caveData}
         height={window.innerHeight}
         width={window.innerWidth}
@@ -159,7 +160,7 @@ const GamePage = () => {
       >
         <p>Congratulations! You've won! Your final score is: {score}</p>
       </Modal>
-    </div>
+    </>
   );
 };
 
