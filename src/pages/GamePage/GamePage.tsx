@@ -5,12 +5,9 @@ import Cave from '../../components/Cave/Cave';
 import Drone from '../../components/Drone/Drone';
 import GameControl from '../../components/GameControl/GameControl';
 import { Modal } from 'antd';
+import Loader from '../../components/Loader/Loader';
 
-interface GamePageProps {
-  initialComplexity: number;
-}
-
-const GamePage = ({ initialComplexity }: GamePageProps) => {
+const GamePage = () => {
   const { playerId } = useParams<{ playerId: string }>();
   const [caveData, setCaveData] = useState<[number, number][]>([]);
   const [dronePosition, setDronePosition] = useState({ x: 50, y: 10 });
@@ -18,7 +15,8 @@ const GamePage = ({ initialComplexity }: GamePageProps) => {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [win, setWin] = useState(false);
-  const [complexity, setComplexity] = useState(initialComplexity);
+  const [complexity, setComplexity] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleKeyDown = (event: KeyboardEvent) => {
     const { key } = event;
@@ -56,12 +54,19 @@ const GamePage = ({ initialComplexity }: GamePageProps) => {
   useEffect(() => {
     const fetchData = async () => {
       if (playerId) {
+        setIsLoading(true);
         try {
           const token = await getPlayerToken(playerId);
           const caveData = await getCaveData(playerId, token);
-          setCaveData(caveData);
+          if (caveData.length > 0) {
+            setCaveData(caveData);
+          } else {
+            console.error('Empty cave data received');
+          }
         } catch (error) {
           console.error('Error fetching game data:', error);
+        } finally {
+          setIsLoading(false);
         }
       }
     };
@@ -100,10 +105,6 @@ const GamePage = ({ initialComplexity }: GamePageProps) => {
     return () => clearInterval(gameLoop);
   }, [dronePosition, droneSpeed, caveData, complexity, score]);
 
-  useEffect(() => {
-    setComplexity(initialComplexity);
-  }, [initialComplexity]);
-
   const detectCollision = (
     x: number,
     y: number,
@@ -122,11 +123,18 @@ const GamePage = ({ initialComplexity }: GamePageProps) => {
         }
       }
 
-      if (y < window.innerHeight - wallHeight) {
+      if (y >= window.innerHeight - wallHeight) {
         if (x + droneWidth > leftWall && x < leftWall + wallHeight) {
           return true;
         }
         if (x < rightWall && x + droneWidth > rightWall - wallHeight) {
+          return true;
+        }
+      } else {
+        if (
+          (x + droneWidth > leftWall && x < leftWall + wallHeight) ||
+          (x < rightWall && x + droneWidth > rightWall - wallHeight)
+        ) {
           return true;
         }
       }
@@ -143,31 +151,37 @@ const GamePage = ({ initialComplexity }: GamePageProps) => {
 
   return (
     <>
-      <h2 style={{ textAlign: 'center' }}>Game is starting</h2>
-      <Cave
-        wallHeight={10}
-        caveData={caveData}
-        height={window.innerHeight}
-        width={window.innerWidth}
-      />
-      <Drone x={dronePosition.x} y={dronePosition.y} />
-      <GameControl onKeyDown={handleKeyDown} />
-      <Modal
-        open={gameOver}
-        title="Game Over"
-        onCancel={() => setGameOver(false)}
-        onOk={() => window.location.reload()}
-      >
-        <p>Game Over! Your final score is: {score}</p>
-      </Modal>
-      <Modal
-        open={win}
-        title="Congratulations!"
-        onCancel={() => setWin(false)}
-        onOk={() => window.location.reload()}
-      >
-        <p>Congratulations! You've won! Your final score is: {score}</p>
-      </Modal>
+      {isLoading ? (
+        <Loader />
+      ) : (
+        <>
+          <h2>Game is starting</h2>
+          <Cave
+            wallHeight={10}
+            caveData={caveData}
+            height={window.innerHeight}
+            width={window.innerWidth}
+          />
+          <Drone x={dronePosition.x} y={dronePosition.y} />
+          <GameControl onKeyDown={handleKeyDown} />
+          <Modal
+            open={gameOver}
+            title="Game Over"
+            onCancel={() => setGameOver(false)}
+            onOk={() => window.location.reload()}
+          >
+            <p>Game Over! Your final score is: {score}</p>
+          </Modal>
+          <Modal
+            open={win}
+            title="Congratulations!"
+            onCancel={() => setWin(false)}
+            onOk={() => window.location.reload()}
+          >
+            <p>Congratulations! You've won! Your final score is: {score}</p>
+          </Modal>
+        </>
+      )}
     </>
   );
 };
