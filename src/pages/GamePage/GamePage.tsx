@@ -1,55 +1,80 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
-import { getPlayerToken, getCaveData } from '../../services/gameService';
+import { getPlayerToken } from '../../services/gameService';
 import Cave from '../../components/Cave/Cave';
 import Drone from '../../components/Drone/Drone';
 import GameControl from '../../components/GameControl/GameControl';
 import { Modal } from 'antd';
 import Loader from '../../components/Loader/Loader';
 
+interface GamePageParams {
+  playerId: string;
+}
+
+interface DronePosition {
+  x: number;
+  y: number;
+}
+
+interface DroneSpeed {
+  x: number;
+  y: number;
+}
+
 const GamePage = () => {
-  const { playerId } = useParams<{ playerId: string }>();
+  const { playerId } = useParams<GamePageParams>();
   const [caveData, setCaveData] = useState<[number, number][]>([]);
-  const [dronePosition, setDronePosition] = useState({ x: 50, y: 10 });
-  const [droneSpeed, setDroneSpeed] = useState({ x: 0, y: 0 });
-  const [score, setScore] = useState(0);
-  const [gameOver, setGameOver] = useState(false);
-  const [win, setWin] = useState(false);
-  const [complexity, setComplexity] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [dronePosition, setDronePosition] = useState<DronePosition>({
+    x: 50,
+    y: 10,
+  });
+  const [droneSpeed, setDroneSpeed] = useState<DroneSpeed>({ x: 0, y: 0 });
+  const [score, setScore] = useState<number>(0);
+  const [gameOver, setGameOver] = useState<boolean>(false);
+  const [win, setWin] = useState<boolean>(false);
+  const [complexity, setComplexity] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    const { key } = event;
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const { key } = event;
 
-    switch (key) {
-      case 'ArrowLeft':
-        setDroneSpeed((prevSpeed) => ({
-          ...prevSpeed,
-          x: Math.max(-5, prevSpeed.x - 1),
-        }));
-        break;
-      case 'ArrowRight':
-        setDroneSpeed((prevSpeed) => ({
-          ...prevSpeed,
-          x: Math.min(5, prevSpeed.x + 1),
-        }));
-        break;
-      case 'ArrowUp':
-        setDroneSpeed((prevSpeed) => ({
-          ...prevSpeed,
-          y: Math.min(5, prevSpeed.y + 1),
-        }));
-        break;
-      case 'ArrowDown':
-        setDroneSpeed((prevSpeed) => ({
-          ...prevSpeed,
-          y: Math.max(-5, prevSpeed.y - 1),
-        }));
-        break;
-      default:
-        break;
-    }
-  };
+      switch (key) {
+        case 'ArrowLeft':
+          setDroneSpeed((prevSpeed) => ({
+            ...prevSpeed,
+            x: Math.max(-5, prevSpeed.x - 1),
+          }));
+          break;
+        case 'ArrowRight':
+          setDroneSpeed((prevSpeed) => ({
+            ...prevSpeed,
+            x: Math.min(5, prevSpeed.x + 1),
+          }));
+          break;
+        case 'ArrowUp':
+          setDroneSpeed((prevSpeed) => ({
+            ...prevSpeed,
+            y: Math.min(5, prevSpeed.y + 1),
+          }));
+          break;
+        case 'ArrowDown':
+          setDroneSpeed((prevSpeed) => ({
+            ...prevSpeed,
+            y: Math.max(-5, prevSpeed.y - 1),
+          }));
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,12 +82,27 @@ const GamePage = () => {
         setIsLoading(true);
         try {
           const token = await getPlayerToken(playerId);
-          const caveData = await getCaveData(playerId, token);
-          if (caveData.length > 0) {
-            setCaveData(caveData);
-          } else {
-            console.error('Empty cave data received');
-          }
+          const newSocket = new WebSocket(
+            `wss://cave-drone-server.shtoa.xyz/cave`
+          );
+          setSocket(newSocket);
+
+          newSocket.onopen = () => {
+            newSocket.send(`player:${playerId}-${token}`);
+          };
+
+          newSocket.onmessage = (event) => {
+            if (event.data === 'finished') {
+              newSocket.close();
+            } else {
+              const [left, right] = event.data.split(',').map(Number);
+              setCaveData((prevData) => [...prevData, [left, right]]);
+            }
+          };
+
+          newSocket.onclose = () => {
+            setSocket(null);
+          };
         } catch (error) {
           console.error('Error fetching game data:', error);
         } finally {
@@ -72,12 +112,13 @@ const GamePage = () => {
     };
 
     fetchData();
-  }, [playerId]);
 
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    return () => {
+      if (socket) {
+        socket.close();
+      }
+    };
+  }, [playerId]);
 
   useEffect(() => {
     const updateGame = () => {
@@ -101,7 +142,7 @@ const GamePage = () => {
       setScore(newScore);
     };
 
-    const gameLoop = setInterval(updateGame, 50);
+    const gameLoop = setInterval(updateGame, 100);
     return () => clearInterval(gameLoop);
   }, [dronePosition, droneSpeed, caveData, complexity, score]);
 
@@ -117,37 +158,28 @@ const GamePage = () => {
     for (let i = 0; i < caveData.length; i++) {
       const [leftWall, rightWall] = caveData[i];
 
-      if (y + droneHeight >= window.innerHeight - wallHeight) {
-        if (x + droneWidth > leftWall && x < rightWall) {
-          return true;
-        }
+      if (
+        y >= window.innerHeight - wallHeight &&
+        y <= window.innerHeight &&
+        ((x >= leftWall && x <= leftWall + wallHeight) ||
+          (x + droneWidth >= rightWall - wallHeight &&
+            x + droneWidth <= rightWall))
+      ) {
+        return true;
       }
 
-      if (y >= window.innerHeight - wallHeight) {
-        if (x + droneWidth > leftWall && x < leftWall + wallHeight) {
-          return true;
-        }
-        if (x < rightWall && x + droneWidth > rightWall - wallHeight) {
-          return true;
-        }
-      } else {
-        if (
-          (x + droneWidth > leftWall && x < leftWall + wallHeight) ||
-          (x < rightWall && x + droneWidth > rightWall - wallHeight)
-        ) {
-          return true;
-        }
+      if (
+        y >= window.innerHeight - wallHeight - droneHeight &&
+        y <= window.innerHeight - wallHeight &&
+        x + droneWidth > leftWall &&
+        x < rightWall
+      ) {
+        return true;
       }
     }
 
     return false;
   };
-
-  useEffect(() => {
-    if (caveData.length > 0) {
-      console.log(caveData);
-    }
-  }, [caveData]);
 
   return (
     <>
@@ -156,14 +188,16 @@ const GamePage = () => {
       ) : (
         <>
           <h2>Game is starting</h2>
-          <Cave
-            wallHeight={10}
-            caveData={caveData}
-            height={window.innerHeight}
-            width={window.innerWidth}
-          />
-          <Drone x={dronePosition.x} y={dronePosition.y} />
-          <GameControl onKeyDown={handleKeyDown} />
+          <div style={{ width: '600px', height: '600px' }}>
+            <Cave
+              wallHeight={10}
+              caveData={caveData}
+              height={window.innerHeight}
+              width={window.innerWidth}
+            />
+            <Drone x={dronePosition.x} y={dronePosition.y} />
+            <GameControl setDroneSpeed={setDroneSpeed} />
+          </div>
           <Modal
             open={gameOver}
             title="Game Over"
